@@ -1,7 +1,5 @@
 package com.appsdeveloperblog.estore.transfers.service;
 
-import java.net.ConnectException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
@@ -51,13 +49,19 @@ public class TransferServiceImpl implements TransferService {
 
 			kafkaTemplate.send(environment.getProperty("deposit-money-topic", "deposit-money-topic"), depositEvent);
 			LOGGER.info("Sent event to deposit topic");
-
 		} catch (Exception ex) {
 			LOGGER.error(ex.getMessage(), ex);
 			throw new TransferServiceException(ex);
 		}
 
 		return true;
+	}
+
+	private void executeLocalTransaction(String topic, WithdrawalRequestedEvent withdrawalEvent) {
+		kafkaTemplate.executeInTransaction(t -> {
+			kafkaTemplate.send(topic, withdrawalEvent);
+			return true;
+		});
 	}
 
 	private ResponseEntity<String> callRemoteServce() throws Exception {
